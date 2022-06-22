@@ -4,3 +4,11 @@ As I said, the first project was to make a snake game in python using the pyglet
 Thanks!:)
 At the end of writing the code, the question arose of how to export the code to an .exe file. Tried with pyinstaller but didn't work. He compiled the program, but it does not open. Gives an error that it cannot find a certain image or font file.
 I would be very grateful if someone could help with this issue.
+
+## For Executable:
+In the The-Snake folder:
+* `pyinstaller --onefile .\main.py`
+* `cp .\dist\main.exe .`
+* `.\main.exe`
+
+The fonts and images need to be in the same directory as that of executable. I hope other steps are self-explanatory.
