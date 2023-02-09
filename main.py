@@ -6,10 +6,10 @@ import pyglet as pg
 from os import getcwd
 
 cur_path = getcwd()
-print(cur_path)
 
 pg.resource.path = [cur_path]
 pg.resource.reindex()
+
 
 class Start_menu(pg.window.Window):
     def __init__(self):
@@ -53,7 +53,7 @@ class Start_menu(pg.window.Window):
     def on_mouse_press(self, x, y, button, modifiers):
         if (button == pg.window.mouse.LEFT and self.but_pos_x + 15 <= x <= self.but_pos_x + 440 and
                 self.butplay_pos_y + 30 <= y <= self.butplay_pos_y + 170):
-            window = Snake()
+            window = The_game()
             window.set_location(200, 100)
             self.close()
             pg.app.run()
@@ -64,7 +64,6 @@ class Start_menu(pg.window.Window):
             window.set_location(200, 100)
             self.close()
             pg.app.run()
-
 
 class Leader_board(pg.window.Window):
     def __init__(self):
@@ -146,6 +145,82 @@ class Leader_board(pg.window.Window):
                       batch=method,
                       anchor_x=anchor)
 
+class Snake():
+    def spawn_head(self, x, y, batch, side=40):
+        # load head image and create sprite
+        self.head_snake_img = pg.image.load('images/the_game/head_snake_1.png')
+        self.head_snake_img.anchor_x = side // 2  # center snap to rotate the sprite correctly
+        self.head_snake_img.anchor_y = side // 2
+        self.head_snake = pg.sprite.Sprite(img=self.head_snake_img, x=x, y=y, batch=batch)
+        self.head_snake.update(rotation=180)  # 180 degree turn
+        return self.head_snake
+
+    def spawn_part(self, x, y, batch, side=40):
+        # two parts the snake
+        self.section_snake_img = pg.image.load('images/the_game/snake_section_1.png')
+        self.section_snake_img.anchor_x = side // 2  # center snap to rotate the sprite correctly
+        self.section_snake_img.anchor_y = side // 2
+        return pg.sprite.Sprite(img=self.section_snake_img, x=x, y=y , batch=batch)
+
+    def motion(self, head, snake, change_x, change_y):
+        for i in range(len(snake) - 1, 0, -1):  # loop iterates sections of the snake from the tail
+            # move the section to the place of the previous section
+            snake[i].x = snake[i - 1].x
+            snake[i].y = snake[i - 1].y
+
+        # moving snake hed
+        head.x += change_x
+        head.y += change_y
+
+        # if the snake goes out of bounds, then it crawls out on the other side
+        if head.x > 1102:
+            head.x = 19
+        elif head.x < 0:
+            head.x = 1083
+        elif head.y > 608:
+            head.y = 19
+        elif head.y < 0:
+            head.y = 589
+
+class Obstacles():
+    position = []  # here are the coordinates of all the stones and apples
+
+    def __init__(self):
+        The_game.__init__(self)
+
+    def spawn(self, change, img, place):
+        # a place is selected where there are no stones or apples yet and on the trajectory of the snake
+        self.pos_x = randint(0, 28) * change
+        self.pos_y = randint(0, 14) * change
+        while (self.pos_x, self.pos_y) in Obstacles.position:
+            self.pos_x = randint(0, 28) * change
+            self.pos_y = randint(0, 14) * change
+        # adding a position to the list
+        Obstacles.position.insert(place, (self.pos_x + change // 2, self.pos_y + change // 2))
+        return pg.sprite.Sprite(img, x=self.pos_x, y=self.pos_y, batch=self.batch_obstacles)
+
+class Apple(Obstacles):
+    # uploading an apple image
+    apple_img = pg.image.load('images/the_game/apple.png')
+    apple_img.anchor_x = 1
+
+    def __init__(self):
+        Obstacles.__init__(self)
+
+    # we use the method to spawn obstacles
+    def spawn(self):
+        return Obstacles.spawn(self, self.change, Apple.apple_img, 0)
+
+class Stone(Obstacles):
+    # uploading a stone image
+    stone_img = pg.image.load('images/the_game/stone.png')
+
+    def __init__(self):
+        Obstacles.__init__(self)
+
+    # we use the method to spawn obstacles
+    def spawn(self):
+        return Obstacles.spawn(self, self.change, Stone.stone_img, 1)
 
 class The_game(pg.window.Window):
     def __init__(self):
@@ -158,7 +233,7 @@ class The_game(pg.window.Window):
 
         self.batch_snake = pg.graphics.Batch()  # Method for drawing
         self.batch_text = pg.graphics.Batch()
-        self.batch_apple = pg.graphics.Batch()
+        self.batch_obstacles = pg.graphics.Batch()
         self.batch_game_end = pg.graphics.Batch()
         self.batch_game_end_enter = pg.graphics.Batch()
         self.batch_stars = pg.graphics.Batch()
@@ -193,35 +268,14 @@ class The_game(pg.window.Window):
         self.change_x = 0
         self.change_y = -self.change
 
-        # apple
-        self.apple_img = pg.image.load('images/the_game/apple.png')
-        self.apple_img.anchor_x = 1
-
-        # head the snake
+        # snake
         self.start_pos_x, self.start_pos_y = 589, 285
-        # load head image and create sprite
-        self.head_snake_img = pg.image.load('images/the_game/head_snake_1.png')
-        self.head_snake_img.anchor_x = self.side // 2  # center snap to rotate the sprite correctly
-        self.head_snake_img.anchor_y = self.side // 2
-        self.head_snake = pg.sprite.Sprite(img=self.head_snake_img, x=self.start_pos_x, y=self.start_pos_y,
-                                           batch=self.batch_snake)
-        self.head_snake.update(rotation=180)  # 180 degree turn
+        self.head_snake = Snake.spawn_head(self, self.start_pos_x, self.start_pos_y, self.batch_snake)
+        self.the_snake = [self.head_snake] # list with all parts of the snake
+        self.the_snake.append(Snake.spawn_part(self, self.start_pos_x, self.start_pos_y + self.side - 2, self.batch_snake))
+        self.the_snake.append(Snake.spawn_part(self, self.start_pos_x, self.start_pos_y + (self.side - 2) * 2, self.batch_snake))
 
-        # the snake and two part
-        self.section_snake_img = pg.image.load('images/the_game/snake_section_1.png')
-        self.section_snake_img.anchor_x = self.side // 2  # center snap to rotate the sprite correctly
-        self.section_snake_img.anchor_y = self.side // 2
-        self.section_2 = pg.sprite.Sprite(img=self.section_snake_img, x=self.start_pos_x,
-                                          y=self.start_pos_y + self.side - 2, batch=self.batch_snake)
-        self.section_3 = pg.sprite.Sprite(img=self.section_snake_img, x=self.start_pos_x,
-                                          y=self.start_pos_y + (self.side - 2) * 2, batch=self.batch_snake)
-        self.the_snake = [self.head_snake, self.section_2, self.section_3]
-
-        # a list with the coordinates of all the stones
-        self.stones_position = []
-
-        # stone
-        self.stone_img = pg.image.load('images/the_game/stone.png')
+        # a list with all the stones
         self.stones = []
 
         # the indicator of cutting into the stone
@@ -237,27 +291,9 @@ class The_game(pg.window.Window):
         self.sound_eat = pg.media.load('sounds/eat.wav', streaming=False)
         self.sound_crash = pg.media.load('sounds/crash.wav', streaming=False)
 
-    def on_draw(self):
-        self.clear()
-        self.the_game_fon.blit(0, 0)
-        self.batch_apple.draw()  # so that the snake is on top of the apple
-        self.batch_snake.draw()
-        self.the_game_hat.blit(0, 600)
-        self.batch_game_end.draw()
-        self.batch_game_end_enter.draw()
-        self.text_points_counters.draw()
-        self.batch_text.draw()
-        self.batch_stars.draw()
-
-
-class Snake(The_game):
-    def __init__(self):
-        The_game.__init__(self)
-
         # loading leaderboard from file
-        self.f = open('leaderboards.data', 'rb+')
-        self.players = pickle.load(self.f)
-        self.f.close()
+        with open('leaderboards.data', 'rb+') as self.f:
+            self.players = pickle.load(self.f)
 
         # name in case of winning
         self.name_text = ''
@@ -269,6 +305,18 @@ class Snake(The_game):
         self.apple_counter = 0  # checks if there are apples in the field
 
         pg.clock.schedule_interval(self.update, .25)  # update window
+
+    def on_draw(self):
+        self.clear()
+        self.the_game_fon.blit(0, 0)
+        self.batch_obstacles.draw()  # so that the snake is on top of the apple
+        self.batch_snake.draw()
+        self.the_game_hat.blit(0, 600)
+        self.batch_game_end.draw()
+        self.batch_game_end_enter.draw()
+        self.text_points_counters.draw()
+        self.batch_text.draw()
+        self.batch_stars.draw()
 
     # a function that updates the values in the leaderboard
     @staticmethod
@@ -320,24 +368,24 @@ class Snake(The_game):
         if symbol == pg.window.key.LEFT and self.change_x == 0:
             self.change_x = -self.change
             self.change_y = 0
-            self.head_snake.update(rotation=270)  # turn in the right direction
+            self.head_snake.update(rotation=270)  # turn in the right direction, left
         elif symbol == pg.window.key.RIGHT and self.change_x == 0:
             self.change_x = self.change
             self.change_y = 0
-            self.head_snake.update(rotation=90)  # turn in the right direction
+            self.head_snake.update(rotation=90)  # turn in the right direction, right
         elif symbol == pg.window.key.DOWN and self.change_y == 0:
             self.change_x = 0
             self.change_y = -self.change
-            self.head_snake.update(rotation=180)  # turn in the right direction
+            self.head_snake.update(rotation=180)  # turn in the right direction, down
         elif symbol == pg.window.key.UP and self.change_y == 0:
             self.change_x = 0
             self.change_y = self.change
-            self.head_snake.update(rotation=0)  # turn in the right direction
+            self.head_snake.update(rotation=0)  # turn in the right direction, up
 
         # restart game
         if self.game_over and symbol == pg.window.key.SPACE and not self.bool_input:
 
-            self.stones_position.clear()  # clear the stones
+            Obstacles.position.clear()  # clear the stones
             self.stones.clear()
             del self.apple
 
@@ -393,55 +441,17 @@ class Snake(The_game):
 
     def update(self, dt):  # updates the playing field
         if not self.game_over:
-            for i in range(len(self.the_snake) - 1, 0, -1):  # loop iterates sections of the snake from the tail
-                # move the section to the place of the previous section
-                self.the_snake[i].x = self.the_snake[i - 1].x
-                self.the_snake[i].y = self.the_snake[i - 1].y
+            Snake.motion(self, self.head_snake, self.the_snake, self.change_x, self.change_y)
 
-            # moving snake hed
-            self.head_snake.x += self.change_x
-            self.head_snake.y += self.change_y
-
-            # if the snake goes out of bounds, then it crawls out on the other side
-            if self.head_snake.x > 1102:
-                self.head_snake.x = 19
-            elif self.head_snake.x < 0:
-                self.head_snake.x = 1083
-            elif self.head_snake.y > 608:
-                self.head_snake.y = 19
-            elif self.head_snake.y < 0:
-                self.head_snake.y = 589
-
-            # spawn an apple if needed
+            # spawn an apple if necessary
             if self.apple_counter == 0:
+
                 # spawn a stone if necessary
                 if self.points_counters % 5 == 0 and self.points_counters > 0:
-                    # position
-                    self.pos_stone_x = randint(0, 28) * self.change
-                    self.pos_stone_y = randint(0, 14) * self.change
-                    while (self.pos_stone_x, self.pos_stone_y) in self.stones_position:
-                        self.pos_stone_x = randint(0, 28) * self.change
-                        self.pos_stone_y = randint(0, 14) * self.change
+                    self.stones.append(Stone.spawn(self))
 
-                    # a list with the coordinates of all the stones
-                    self.stones_position.append((self.pos_stone_x + self.change // 2,
-                                                 self.pos_stone_y + self.change // 2))
-
-                    self.stones.append(pg.sprite.Sprite(self.stone_img, x=self.pos_stone_x, y=self.pos_stone_y,
-                                                        batch=self.batch_apple))
-
-                # get coordinates inside the window using its width and height
-                # we get the location of the apple, similar to the trajectory of the snake,
-                # so that the snake eats the apple directly and so that the apple does not fall on the stone
-                self.pos_x = randint(0, 28) * self.change - 1
-                self.pos_y = randint(0, 14) * self.change + 1
-                for (x, y) in self.stones_position:
-                    while self.pos_x + 1 + self.change // 2 == x and self.pos_y - 1 + self.change // 2 == y:
-                        self.pos_x = randint(0, 28) * self.change - 1
-                        self.pos_y = randint(0, 14) * self.change + 1
-
-                self.apple = pg.sprite.Sprite(img=self.apple_img, x=self.pos_x, y=self.pos_y, batch=self.batch_apple)
-
+                # spawn an apple
+                self.apple = Apple.spawn(self)
                 self.apple_counter += 1  # informs that there is an apple on the field
 
             # checking if the snake has eaten the apple
@@ -452,11 +462,12 @@ class Snake(The_game):
 
                 # if the snake ate an apple, then a new apple is generated, because apple counter becomes 0
                 self.apple_counter -= 1
+                Obstacles.position = Obstacles.position[1:]
+                del self.apple
 
                 # add snake section
                 # adds 1 snake section in front of the tail
-                self.the_snake.insert(-1, pg.sprite.Sprite(img=self.section_snake_img, x=self.the_snake[-2].x,
-                                                           y=self.the_snake[-2].y, batch=self.batch_snake))
+                self.the_snake.insert(-1, Snake.spawn_part(self, self.the_snake[-2].x, self.the_snake[-2].y, self.batch_snake))
                 # center snap to move properly behind the head
                 self.the_snake[-2].anchor_x = self.side // 2
                 self.the_snake[-2].anchor_y = self.side // 2
@@ -470,7 +481,7 @@ class Snake(The_game):
                                                           color=(255, 255, 255, 255),
                                                           x=300, y=627)
 
-            for (x, y) in self.stones_position:
+            for (x, y) in Obstacles.position:
                 if x == self.head_snake.x and y == self.head_snake.y:
                     self.crash = True
                     break
@@ -524,26 +535,16 @@ class Snake(The_game):
                                               color=(0, 0, 0, 255),
                                               x=551, y=246, anchor_x='center',
                                               batch=self.batch_text)
-                # update leaderboard
                 else:
-                    if self.points_counters > self.players['player_4'][1]:
-                        if self.points_counters > self.players['player_3'][1]:
-                            if self.points_counters > self.players['player_2'][1]:
-                                if self.points_counters > self.players['player_1'][1]:
-                                    # update 1 position
-                                    self.update_leaderboard('player_1', self.name_text, self.points_counters)
-                                else:
-                                    # update 2 position
-                                    self.update_leaderboard('player_2', self.name_text, self.points_counters)
-                            else:
-                                # update 3 position
-                                self.update_leaderboard('player_3', self.name_text, self.points_counters)
-                        else:
-                            # update 4 position
-                            self.update_leaderboard('player_4', self.name_text, self.points_counters)
+                    # update leaderboard
+                    self.name_player = 'player_'
+                    self.player_number = 5
+                    while self.points_counters > self.players[self.name_player + str(self.player_number)][1] and self.player_number > 0:
+                        self.player_number -= 1
                     else:
-                        # update 5 position
-                        self.update_leaderboard('player_5', self.name_text, self.points_counters)
+                        self.player_number += 1
+                        self.update_leaderboard(self.name_player + str(self.player_number), self.name_text, self.points_counters)
+
             if not self.bool_input:
                 # clear window
                 try:
@@ -560,8 +561,6 @@ class Snake(The_game):
                                                  batch=self.batch_text)
                 self.snake_end = pg.sprite.Sprite(img=self.snake_end_img, x=473, y=183, batch=self.batch_text)
                 self.stars = pg.sprite.Sprite(img=self.stars_ani, x=473, y=270, batch=self.batch_stars)
-
-
 
 
 if __name__ == '__main__':
