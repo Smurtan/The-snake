@@ -3,6 +3,14 @@ from random import randint
 
 import pyglet as pg
 
+from os import getcwd
+
+cur_path = getcwd()
+
+pg.resource.path = [cur_path]
+pg.resource.reindex()
+
+
 class Start_menu(pg.window.Window):
     def __init__(self):
         super(Start_menu, self).__init__(1102, 700, caption='Змейка')

@@ -1,4 +1,5 @@
 # The-snake
+
 I present you an excellent copy of the game "Snake".  
   
 ![image](https://user-images.githubusercontent.com/98029304/199066020-66d07038-1d38-45b0-b3bb-e55d91ddf62f.png)  
@@ -23,3 +24,11 @@ Thank you for your time😋
   
 Well, if you have another minute, you can help me in my development and tell me how to assemble my something into one exe file. I tried to do this through pyinstaller, but nothing worked, when I start, an error is returned that a particular file was not found.  
 I will be very glad :)
+  
+## For Executable:
+In the The-Snake folder:
+* `pyinstaller --onefile .\main.py`
+* `cp .\dist\main.exe .`
+* `.\main.exe`
+
+The fonts and images need to be in the same directory as that of executable. I hope other steps are self-explanatory.
