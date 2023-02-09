@@ -31,4 +31,4 @@ In the The-Snake folder:
 * `cp .\dist\main.exe .`
 * `.\main.exe`
 
-The fonts and images need to be in the same directory as that of executable. I hope other steps are self-explanatory.
+The fonts and images need to be in the same directory as that of executable.
